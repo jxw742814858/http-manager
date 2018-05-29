@@ -1,6 +1,8 @@
-package entity;
+package cn.iamtudou.entity;
 
-public class HttpEntity {
+import java.io.Serializable;
+
+public class HttpEntity implements Serializable {
 
     private String url;
     private String host;
