@@ -11,12 +11,16 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Server {
     private static final String ENTER = "\r\n";
     private static final String SPACE = " ";
+
+    ExecutorService es = Executors.newFixedThreadPool(20);
 
     public static void main(String[] args) {
         Server server = new Server();
@@ -26,7 +30,10 @@ public class Server {
     private void start() {
         try {
             ServerSocket ss = new ServerSocket(8081);
-            receive(ss.accept());
+            while (true) {
+                Socket client = ss.accept();
+                es.execute(() -> receive(client));
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -81,6 +88,7 @@ public class Server {
 
     /**
      * header 参数解析
+     *
      * @param headerStr
      * @return
      */
@@ -101,6 +109,7 @@ public class Server {
 
     /**
      * 完整消息解析
+     *
      * @param reqStr
      * @param origin
      * @return
@@ -199,6 +208,7 @@ public class Server {
 
     /**
      * 文件类型请求内容解析
+     *
      * @param reqStr
      * @param boundary
      * @return
@@ -211,6 +221,7 @@ public class Server {
 
     /**
      * 使用正则的匹配值获取
+     *
      * @param str
      * @param reg
      * @return
@@ -228,6 +239,7 @@ public class Server {
 
     /**
      * 文件类型文本内容提取和拼接
+     *
      * @param str
      * @param reg
      * @return
