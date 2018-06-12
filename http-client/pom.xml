@@ -16,11 +16,11 @@
     </properties>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/io.socket/socket.io-client -->
+        <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
-            <groupId>io.socket</groupId>
-            <artifactId>socket.io-client</artifactId>
-            <version>${socket-verison}</version>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.11.3</version>
         </dependency>
 
     </dependencies>

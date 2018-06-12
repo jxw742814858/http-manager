@@ -13,7 +13,16 @@ import java.nio.charset.Charset;
 import java.util.Map;
 
 public class Request {
+
     static Logger LOG = LoggerFactory.getLogger(Request.class);
+
+    public static HttpEntity head(String url) {
+        return baseReq(url, null, null, null, null, HttpConstants.REQUEST_METHOD_HEAD);
+    }
+
+    public static HttpEntity head(String url, ProxyEntity proxyEntity) {
+        return baseReq(url, proxyEntity, null, null, null, HttpConstants.REQUEST_METHOD_HEAD);
+    }
 
     public static HttpEntity get(String url) {
         return baseReq(url, null, null, null, null, HttpConstants.REQUEST_METHOD_GET);
@@ -52,6 +61,51 @@ public class Request {
         return baseReq(url, proxyEntity, header, dataStr, charset, HttpConstants.REQUEST_METHOD_POST);
     }
 
+    public static HttpEntity put(String url, String dataStr) {
+        return baseReq(url, null, null, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity put(String url, Map<String, String> header, String dataStr) {
+        return baseReq(url, null, header, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity put(String url, ProxyEntity proxyEntity, String dataStr) {
+        return baseReq(url, proxyEntity, null, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity put(String url, ProxyEntity proxyEntity, Map<String, String> header, String dataStr,
+                                 Charset charset) {
+        return baseReq(url, proxyEntity, header, dataStr, charset, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity patch(String url, String dataStr) {
+        return baseReq(url, null, null, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity patch(String url, Map<String, String> header, String dataStr) {
+        return baseReq(url, null, header, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity patch(String url, ProxyEntity proxyEntity, String dataStr) {
+        return baseReq(url, proxyEntity, null, dataStr, null, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    public static HttpEntity patch(String url, ProxyEntity proxyEntity, Map<String, String> header, String dataStr,
+                                   Charset charset) {
+        return baseReq(url, proxyEntity, header, dataStr, charset, HttpConstants.REQUEST_METHOD_POST);
+    }
+
+    /**
+     * 请求公共实现类
+     *
+     * @param url
+     * @param proxyEntity
+     * @param header
+     * @param dataStr
+     * @param charset
+     * @param requestMethod
+     * @return
+     */
     private static HttpEntity baseReq(String url, ProxyEntity proxyEntity, Map<String, String> header, String dataStr,
                                       Charset charset, String requestMethod) {
         if (StrKit.isBlank(url)) {
@@ -95,42 +149,70 @@ public class Request {
                     conn.setRequestProperty(entry.getKey(), entry.getValue());
             }
 
-            if (requestMethod.equals(HttpConstants.REQUEST_METHOD_GET)) {
-                conn.setRequestMethod("GET");
-                inputStream = conn.getInputStream();
-                baos = new ByteArrayOutputStream();
-                byte[] bytes = new byte[1024];
-                int len = 0;
-                while ((len = inputStream.read(bytes)) != -1) {
-                    baos.write(bytes, 0, len);
-                    baos.flush();
-                }
+            //TODO 待验证作用
+            conn.setInstanceFollowRedirects(true);
 
-                html = baos.toString(charsetStr);
-            } else if (requestMethod.equals(HttpConstants.REQUEST_METHOD_POST)) {
-                conn.setDoOutput(true);
-                conn.setDoInput(true);
-                conn.setUseCaches(false);
-                conn.setRequestMethod("POST");
+            switch (requestMethod) {
+                case HttpConstants.REQUEST_METHOD_HEAD:
+                    conn.setRequestMethod("HEAD");
+                    break;
+                case HttpConstants.REQUEST_METHOD_GET:
+                    conn.setRequestMethod("GET");
+                    break;
+                case HttpConstants.REQUEST_METHOD_POST:
+                    conn.setRequestMethod("POST");
+                    break;
+                case HttpConstants.REQUEST_METHOD_PUT:
+                    conn.setRequestMethod("PUT");
+                    break;
+                case HttpConstants.REQUEST_METHOD_PATCH:
+                    conn.setRequestMethod("patch");
+                    break;
+                default:
+                    break;
+            }
 
-                dos = new DataOutputStream(conn.getOutputStream());
-                dos.writeBytes(dataStr);
-                dos.flush();
-                dos.close();
+            switch (requestMethod) {
+                case HttpConstants.REQUEST_METHOD_HEAD:
+                case HttpConstants.REQUEST_METHOD_GET:
+                    inputStream = conn.getInputStream();
+                    baos = new ByteArrayOutputStream();
+                    byte[] bytes = new byte[1024];
+                    int len = 0;
+                    while ((len = inputStream.read(bytes)) != -1) {
+                        baos.write(bytes, 0, len);
+                        baos.flush();
+                    }
 
-                StringBuffer sb = new StringBuffer();
-                String line = null;
-                responseReader = new BufferedReader(new InputStreamReader(conn.getInputStream(),
-                        charsetStr));
-                while ((line = responseReader.readLine()) != null)
-                    sb.append(line).append("\n");
+                    html = baos.toString(charsetStr);
+                    break;
+                case HttpConstants.REQUEST_METHOD_POST:
+                case HttpConstants.REQUEST_METHOD_PUT:
+                case HttpConstants.REQUEST_METHOD_PATCH:
+                    conn.setDoOutput(true);
+                    conn.setUseCaches(false);
 
-                html = sb.toString();
+                    dos = new DataOutputStream(conn.getOutputStream());
+                    dos.writeBytes(dataStr);
+                    dos.flush();
+                    dos.close();
+
+                    StringBuffer sb = new StringBuffer();
+                    String line = null;
+                    responseReader = new BufferedReader(new InputStreamReader(conn.getInputStream(),
+                            charsetStr));
+                    while ((line = responseReader.readLine()) != null)
+                        sb.append(line).append("\n");
+
+                    html = sb.toString();
+                    break;
+                default:
+                    break;
             }
 
             httpEntity = new HttpEntity(url, conn.getURL().getHost(), conn.getResponseCode(), html);
         } catch (IOException e) {
-            LOG.error("", e);
+            LOG.error("method: {} | url: {} request failed, msg: {}", requestMethod.toUpperCase(), url, e.getMessage());
         } finally {
             try {
                 if (inputStream != null)
@@ -147,7 +229,7 @@ public class Request {
                 if (header != null)
                     header.clear();
             } catch (IOException e) {
-                LOG.error("a mistake in closing the resource!");
+                LOG.error("a mistake in closing the resource! {}", e);
             }
         }
 
